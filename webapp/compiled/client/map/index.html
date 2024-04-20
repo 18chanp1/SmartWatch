@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Heartbreakers Platform</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Scripts for the maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+
+    </head>
+
+    
+  <body>
+    <div id = "app-view">
+      <div id = "app-menu" class = "topnav">
+        <a href = '/#/'>Homepage</a>
+        <a href = "/#/leaderboard">Leaderboard</a>
+        <a href = "/#/register">Register your DE1</a>
+        <a href = "/map">Upload a route to your DE1</a>
+        <a href = "/logout">Logout</a>
+      </div>
+    </div>
+
+    <div id = "page-view">
+      <div class = "content">
+
+        <H1>Select your route</H1>
+        Double click to add a waypoint
+        <div id="map"></div>
+
+        <button id="submit-coord" type="button" class = "mybutton">Submit route</button> 
+        
+        <script>
+
+          let route = [];
+          let dist = 0;
+          let line;
+
+          const map = L.map('map', {doubleClickZoom: false}).setView([51.505, -0.09], 13);
+
+          //leaflet(data,options = leafletOptions(doubleClickZoom= FALSE))
+
+        
+          const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          }).addTo(map);
+
+          //let location = [];
+
+
+          if(navigator.geolocation)
+          {
+            navigator.geolocation.getCurrentPosition
+            navigator.geolocation.getCurrentPosition((pos)=>
+            {
+
+              map.panTo(new L.LatLng(pos.coords.latitude, pos.coords.longitude));
+            }, 
+            (err) =>
+            {
+              console.log(err);
+            });
+          }
+
+          function onMapClick(e) {
+
+            const marker = L.marker(e.latlng).addTo(map)
+            .bindPopup('Waypoint: ' + route.length).openPopup();
+
+            if(route.length > 0)
+            {
+              dist += route[route.length-1].distanceTo(e.latlng);
+            }
+            route.push(e.latlng);
+
+            line = L.polyline(route, {color:"red"}).addTo(map);
+          }
+        
+          map.on('dblclick', onMapClick);
+
+          //submit clicker
+          let btn = document.querySelector("#submit-coord");
+
+          btn.addEventListener("click", ()=>{
+            let request = new Promise((resolve, reject) => {
+              let xhr = new XMLHttpRequest();
+              xhr.open("POST", "/routeupload", true);
+              xhr.setRequestHeader("Content-type", "application/json");
+              xhr.send(JSON.stringify({route: route, len: dist}));
+
+              xhr.timeout = 2000;
+              xhr.ontimeout = ()=>
+              {
+                  reject( new Error("timed out"));
+              }
+
+              xhr.onload = () => 
+              {
+                  if(xhr.status == 200)
+                  {
+                      
+                      window.alert("Route submitted. \nThe ID is: " + JSON.parse(xhr.response).id + 
+                      "\nThe workout location is: " + JSON.parse(xhr.response).nearestTown);
+                      resolve(xhr.response);
+                      location.reload()
+                  } 
+                  else
+                  {
+                      console.log(xhr.response);
+                      window.alert("submission failed, please try again.");
+                      reject( new Error(xhr.response));
+                  }
+              }
+
+              xhr.onerror = (err) =>
+              {
+                window.alert("submission failed, please try again.");
+                reject(err);
+              }
+
+            })
+
+
+
+            
+          })
+
+        
+        </script>
+        
+      </div>
+
+    </div>
+
+
+    
+
+  </body>
+</html>

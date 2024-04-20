@@ -1,0 +1,41 @@
+conn = new Mongo();
+db = conn.getDB("cpen391-project");
+db.dropDatabase();
+databases = db.getCollectionNames();
+db.users.insertOne(
+    {
+        username: 'alice',
+        password: 'ZSubQx5tFvQ51ai34Ktik4Yhnow=vTpnrUoumg9T80OBLbn3Xp9CccZhVlqGSOZgY+fCsw8=',
+        de1serial: "123",
+        currentSerial: 1,
+        uploads: [
+            {
+      "id": "0",
+      "completed": true,
+      "locationRecord": [
+        {
+          "lat": 51.5138028904017,
+          "lng": -0.09862294466059797
+        },
+        {
+          "lat": 51.50792689707778,
+          "lng": -0.0867735022814098
+        },
+        {
+          "lat": 51.49991295748653,
+          "lng": -0.09020812326089536
+        },
+        {
+          "lat": 51.493500791038095,
+          "lng": -0.09398620633830347
+        }
+      ],
+      "workoutDistance": 2.7302297621491443,
+      "workoutDate": "2023-04-01T07:03:46.372+00:00",
+      "workoutTime": 2,
+      "nearestTown": "City of London, ENG, United Kingdom",
+      "isPublic": true
+    }
+        ],
+    }
+)

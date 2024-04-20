@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Heartbreakers Platform</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Scripts for the maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+
+    </head>
+
+    
+  <body>
+    <div id = "app-view">
+      <div id = "app-menu" class = "topnav">
+        <a href = '/#/'>Homepage</a>
+        <a href = "/#/leaderboard">Leaderboard</a>
+        <a href = "/#/register">Register your DE1</a>
+        <a href = "/map">Upload a route to your DE1</a>
+        <a href = "/logout">Logout</a>
+      </div>
+    </div>
+
+    <div id = "page-view">
+      <div class = "content">
+
+        <H1>Route Display</H1>
+        <div id="map"></div>
+
+        <H1>Total Distance</H1>
+        <span id="route-dist"></span> m
+
+        <h1>Steal workout</h1>
+        Interested in this workout? Steal the workout!
+
+        <br>
+
+        <button type="button" class = "mybutton" id = "steal-button">Steal workout</button> 
+
+        
+        <script>
+          let route = [];
+          let line;
+
+          const map = L.map('map', {doubleClickZoom: false}).setView([51.505, -0.09], 13);
+
+          //leaflet(data,options = leafletOptions(doubleClickZoom= FALSE))
+
+        
+          const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          }).addTo(map);
+
+          //let location = [];
+          
+          let params = new URLSearchParams(window.location.search);
+          let workoutID = params.get("workoutID")
+          let type = params.get("type");
+          console.log(type);
+
+          let request = new Promise((resolve, reject) => 
+          {
+              let xhr = new XMLHttpRequest();
+              if(type == "upload"){
+                xhr.open("GET", window.location.origin + "/uploads");
+                console.log("going with upload");
+              } else if (type == "workout")
+              {
+                console.log("going with workout")
+                xhr.open("GET", window.location.origin + "/workouts");
+              }
+              else {
+                reject(new Error("type incorrect"));
+              }
+              xhr.send(null);
+
+              xhr.timeout = 2000;
+
+              xhr.ontimeout = () =>
+              {
+                reject(new Error("timed out"));
+              }
+
+              xhr.onload = () =>
+              {
+                if (xhr.status == 200)
+                {
+                  resolve (JSON.parse(xhr.response));
+                } else 
+                {
+                  reject(new Error(xhr.response));
+                }
+              }
+
+              xhr.onerror = (err) =>
+              {
+                reject(err);
+              }
+          });
+
+
+          request.then((workout) => 
+          {
+            let found = workout.find(o => o.id === workoutID);
+            console.log(found);
+            let coordArr = found.locationRecord;
+
+            let route = [];
+
+            for(let coord of coordArr)
+            {
+              L.marker({lat: coord.lat, lng: coord.lng}).addTo(map);
+              route.push({lat: coord.lat, lng: coord.lng});
+            }
+            L.polyline(route, {color:"red"}).addTo(map);
+
+            map.panTo(route[0]);
+            
+            console.log(found);
+            document.getElementById('route-dist').textContent = parseFloat(found.workoutDistance.toFixed(2));
+            
+          });
+
+          //Button sends post request to copy entry
+
+          let btn = document.querySelector("#steal-button");
+
+          btn.addEventListener("click", ()=>{
+            let request = new Promise((resolve, reject) => {
+              let xhr = new XMLHttpRequest();
+              let url = new URL(window.location.origin + "/steal");
+              url.searchParams.set("workoutID", workoutID);
+              url.searchParams.set("type", type);
+
+              xhr.open("POST", url, true);
+              xhr.setRequestHeader("Content-type", "application/json");
+              xhr.send(null);
+
+              xhr.timeout = 2000;
+              xhr.ontimeout = ()=>
+              {
+                  reject( new Error("timed out"));
+              }
+
+              xhr.onload = () => 
+              {
+                  if(xhr.status == 200)
+                  {
+                      
+                      window.alert("Route copied");
+                      location.reload()
+                  } 
+                  else if (xhr.status == 409)
+                  {
+                    window.alert("Entry already exists, you cannot be so greedy.")
+                  }
+                  else
+                  {
+                      console.log(xhr.response);
+                      window.alert("submission failed, please try again.");     
+                  }
+              }
+
+              xhr.onerror = (err) =>
+              {
+                window.alert("submission failed, please try again.");
+                reject(err);
+              }
+
+            })
+          })
+        
+        </script>
+        
+      </div>
+
+    </div>
+
+
+    
+
+  </body>
+</html>
